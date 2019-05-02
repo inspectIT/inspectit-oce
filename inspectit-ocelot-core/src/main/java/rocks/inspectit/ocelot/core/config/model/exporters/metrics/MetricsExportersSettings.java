@@ -14,4 +14,10 @@ public class MetricsExportersSettings {
 
     @Valid
     private PrometheusExporterSettings prometheus;
+
+    @Valid
+    private SignalFxExporterSettings signalFx;
+
+    @Valid
+    private OpenCensusAgentMetricsExporterSettings openCensusAgent;
 }

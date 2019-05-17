@@ -56,10 +56,24 @@ const agentStatus = {
     pendingClearRequests: 0,
 }
 
+const settings = {
+    /** Specifying whether a password change request is currently be executed */
+    loading: false,
+    /** Contains error message if the last request has failed. */
+    error: null,
+    /** Contains success message */
+    success: null,
+    /** Contains all users */
+    users: [],
+    /** String which will users will be filtered; can be either Int or String */
+    userFilter: ''
+}
+
 export {
     authentication,
     configuration,
     notification,
     mappings,
-    agentStatus
+    agentStatus,
+    settings
 }

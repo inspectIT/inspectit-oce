@@ -23,10 +23,21 @@ const SideNavigation = () => {
                 align-items: center;
                 border-right: 1px solid #ddd;
             }
+            .align-bottom {
+                width: inherit;
+                align-items: center;
+                display: flex;
+                flex-direction: column;
+                position: fixed;
+                bottom: 0;
+            }
             `}</style>
-            {itemData.map(item => (
-                <NavigationItem key={item.name} href={item.href} name={item.name} icon={item.icon} />
-            ))}
+                {itemData.map(item => (
+                    <NavigationItem key={item.name} href={item.href} name={item.name} icon={item.icon} />
+                ))}
+            <div className='align-bottom'>
+                <NavigationItem key={'settings'} href={'/settings/user'} name={'Settings'} icon={'pi-bars'}/>
+            </div>
         </div>
     )
 }

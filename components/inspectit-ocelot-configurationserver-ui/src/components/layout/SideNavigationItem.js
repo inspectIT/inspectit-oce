@@ -5,7 +5,8 @@ import Link from '../basics/Link'
  * Component used by the side navigation as items.
  */
 const SideNavigationItem = ({ href, icon, name, router }) => {
-    const isActive = router.pathname.endsWith(href);
+    // const isActive = router.pathname.endsWith(href);
+    const isActive = router.pathname.endsWith(href) || (href.includes('settings') && router.pathname.includes('settings'))
 
     return (
         <Link className="this" href={href}>

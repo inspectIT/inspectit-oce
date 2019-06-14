@@ -62,20 +62,6 @@ public class MeasuresAndViewsManagerTest {
 
             BeaconMetricDefinition dummyMetricDefinition = BeaconMetricDefinition.beaconMetricBuilder().beaconField("dummy_beacon_field").description("Dummy description").type(rocks.inspectit.ocelot.config.model.metrics.definition.MetricDefinitionSettings.MeasureType.DOUBLE).unit("ms").enabled(true).views(views).build();
 
-            Map<String, String> extraTags = new HashMap<>();
-            extraTags.put("TAG_1", "tag_value_1");
-            extraTags.put("TAG_2", "tag_value_2");
-
-            Map<String, String> beaconTags = new HashMap<>();
-            beaconTags.put("URL", "u");
-
-            Set<String> globalTags = new HashSet<>();
-            globalTags.add("URL");
-
-            when(tagSettings.getExtra()).thenReturn(extraTags);
-            when(tagSettings.getBeacon()).thenReturn(beaconTags);
-            when(tagSettings.getGlobal()).thenReturn(globalTags);
-
             definitionMap = new HashMap<>();
             definitionMap.put("Dummy metric name", dummyMetricDefinition);
         }
@@ -101,6 +87,19 @@ public class MeasuresAndViewsManagerTest {
 
         @Test
         void verifyViewsAreGeneratedGlobalTagIsSet(){
+            Map<String, String> extraTags = new HashMap<>();
+            extraTags.put("TAG_1", "tag_value_1");
+            extraTags.put("TAG_2", "tag_value_2");
+
+            Map<String, String> beaconTags = new HashMap<>();
+            beaconTags.put("URL", "u");
+
+            Set<String> globalTags = new HashSet<>();
+            globalTags.add("URL");
+
+            when(tagSettings.getExtra()).thenReturn(extraTags);
+            when(tagSettings.getBeacon()).thenReturn(beaconTags);
+            when(tagSettings.getGlobal()).thenReturn(globalTags);
             when(configuration.getDefinitions()).thenReturn(definitionMap);
             when(configuration.getTags()).thenReturn(tagSettings);
             HashMap<String, String> beacon =  new HashMap<String, String>();

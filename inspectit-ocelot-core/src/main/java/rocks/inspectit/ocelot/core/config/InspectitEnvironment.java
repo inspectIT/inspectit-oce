@@ -124,6 +124,7 @@ public class InspectitEnvironment extends StandardEnvironment {
             val event = new InspectitConfigChangedEvent(this, oldConfig, currentConfig);
             eventDrain.publishEvent(event);
         }
+        eventDrain.publishEvent(new PropertySourcesChangedEvent(this));
     }
 
     /**
@@ -194,7 +195,7 @@ public class InspectitEnvironment extends StandardEnvironment {
      * @param <T>         the type of configClazz
      * @return the loaded object in case of success or an empty optional otherwise
      */
-    private <T> Optional<T> loadAndValidateFromProperties(String prefix, Class<T> configClazz) {
+    public synchronized <T> Optional<T> loadAndValidateFromProperties(String prefix, Class<T> configClazz) {
         T newConfig;
         try {
             newConfig = Binder.get(this).bind(prefix, configClazz).get();

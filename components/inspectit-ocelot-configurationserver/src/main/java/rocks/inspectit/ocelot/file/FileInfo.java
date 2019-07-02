@@ -8,7 +8,7 @@ import lombok.Data;
 @Builder
 public class FileInfo {
 
-    enum Type {
+    public enum Type {
         @JsonProperty("directory")
         DIRECTORY,
         @JsonProperty("file")

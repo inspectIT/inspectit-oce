@@ -5,6 +5,7 @@ import { createLogger } from "./middlewares";
 import thunk from 'redux-thunk';
 import { persistReducer } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
+import timerMiddleware from 'redux-timer';
 
 export default function configureStore(initialState, isServer) {
     let reducer = combineReducers(reducers);
@@ -25,6 +26,6 @@ export default function configureStore(initialState, isServer) {
         composeWithDevTools(applyMiddleware(
             createLogger(true),
             thunk
-        ))
+        ), applyMiddleware(timerMiddleware))
     );
 }

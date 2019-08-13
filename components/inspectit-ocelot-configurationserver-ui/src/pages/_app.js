@@ -11,6 +11,9 @@ import NotificationHandler from '../components/common/NotificationHandler';
 import { BASE_PAGE_TITLE } from '../data/constants'
 import { linkPrefix } from '../lib/configuration';
 
+import { authenticationActions } from '../redux/ducks/authentication'
+
+
 // importing required css files for primereact
 import 'primereact/resources/themes/nova-dark/theme.css';
 import 'primereact/resources/primereact.min.css';
@@ -21,11 +24,14 @@ class OcelotConfigurationUI extends App {
 
   constructor(props) {
     super(props)
-    this.persistor = persistStore(props.reduxStore)
+    this.persistor = persistStore(props.reduxStore, null, function() {
+      props.reduxStore.dispatch(authenticationActions.configureTokenRenewTimer());
+    });
   }
 
   render() {
     const { Component, pageProps, reduxStore } = this.props
+
     return (
       <Container>
         <style global jsx>{`

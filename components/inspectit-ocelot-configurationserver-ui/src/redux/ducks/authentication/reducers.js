@@ -39,6 +39,30 @@ const authorizationReducer = createReducer(initialState)({
             username: null
         };
     },
+    [types.RENEW_TOKEN_STARTED]: (state, action) => {
+        return {
+            ...state,
+            loading: true,
+            unauthorized: false
+        };
+    },
+    [types.RENEW_TOKEN_FAILURE]: (state, action) => {
+        const { error } = action.payload;
+        return {
+            ...state,
+            loading: false,
+            error: error,
+        };
+    },
+    [types.RENEW_TOKEN_SUCCESS]: (state, action) => {
+        const { token, username } = action.payload;
+        return {
+            ...state,
+            loading: false,
+            error: null,
+            token
+        };
+    },
     // SPECIAL REDUCER - dispatched by redux-persist to rehydrate store
     ["persist/REHYDRATE"]: (state, action) => {
         if (!action.payload || !action.payload.authentication) {

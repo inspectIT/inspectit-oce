@@ -6,6 +6,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import rocks.inspectit.oce.eum.server.utils.DefaultTags;
 
+import java.util.Arrays;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
@@ -99,5 +101,153 @@ class EumTagsSettingsTest {
 
             assertThat(result).isFalse();
         }
+    }
+
+    @Nested
+    public class IsCheckIPsRangesDoNotOverlap {
+
+        @Test
+        public void emptyCustomMapping(){
+            EumTagsSettings settings = new EumTagsSettings();
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        public void ipsAreEqual(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"127.127.127.127"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"127.127.127.127"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        public void ipsAreNotEqual(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"127.127.127.127"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"127.127.127.128"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        public void cidrsAreEqual(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"10.0.0.0/16"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"10.0.0.0/16"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        public void cidrsOverlap(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"10.0.0.0/16"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"10.0.0.0/17"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        public void cidrsDoNotOverlap(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"10.0.0.0/16"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"10.1.0.0/16"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        public void cidrContainsIp(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"10.0.0.0/16"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"10.0.0.1"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        public void cidrDoesNotContainIp(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"10.0.0.0/16"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"11.0.0.1"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        public void cidrsOfSameLabelAreOverlapping(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"10.0.0.0/16", "10.0.0.0/17"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"11.0.0.1"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        public void cidrAndIpOfSameLabelAreOverlapping(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"10.0.0.0/16", "10.0.0.1"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"11.0.0.1"}));
+
+            boolean result = settings.isCheckIpRangesDoNotOverlap();
+
+            assertThat(result).isTrue();
+        }
+    }
+
+    @Nested
+    public class isCheckIpsAreFormattedCorrectly {
+
+        @Test
+        public void emptyCustomMapping(){
+            EumTagsSettings settings = new EumTagsSettings();
+
+            boolean result = settings.isCheckIpsAreFormattedCorrectly();
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        public void ipsAreNotFormattedCorrectly(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"127.127.127.127.777"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"127.127.127.12"}));
+
+            boolean result = settings.isCheckIpsAreFormattedCorrectly();
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        public void ipsAreFormattedCorrectly(){
+            EumTagsSettings settings = new EumTagsSettings();
+            settings.getCustomIPMapping().put("GER", Arrays.asList(new String[]{"192.168.2.1/20"}));
+            settings.getCustomIPMapping().put("FR", Arrays.asList(new String[]{"11.11.11.11"}));
+            boolean result = settings.isCheckIpsAreFormattedCorrectly();
+
+            assertThat(result).isTrue();
+        }
+
+
     }
 }

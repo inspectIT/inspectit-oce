@@ -3,6 +3,7 @@ package rocks.inspectit.ocelot.core.config;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.env.EnumerablePropertySource;
 import org.springframework.stereotype.Component;
 import rocks.inspectit.ocelot.config.model.InspectitConfig;
@@ -31,6 +32,7 @@ public class PropertyNamesValidator {
             Boolean.class, Byte.class, Short.class, Duration.class));
 
     @PostConstruct
+    @EventListener(InspectitConfigChangedEvent.class)
     public void startStringFinder() {
         env.readPropertySources(propertySources -> {
             propertySources.stream()

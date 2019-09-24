@@ -1,139 +1,95 @@
 import React from 'react';
-import { connect } from 'react-redux'
-import { mappingsActions } from '../../../redux/ducks/mappings';
-import { notificationActions } from '../../../redux/ducks/notification';
-import yaml from 'js-yaml';
 
-import EditorView from "../../editor/EditorView";
+import MappingsToolbar from './MappingToolbar';
+import MappingsTable from './MappingsTable';
 
-/**
- * The view for managing the agent mappings.
- */
-class AgentMappingsView extends React.Component {
+import RefreshDialog from './dialogs/RefreshDialog';
+import DeleteDialog from './dialogs/DeleteDialog';
+import EditDialog from './dialogs/EditDialog';
+import DownloadDialog from './dialogs/DownloadDialog';
 
-    static getDerivedStateFromProps(props, state) {
-        const hasUpdated = props.updateDate != state.lastUpdateDate;
+/** View to display and change mappings */
 
-        if (hasUpdated) {
-            const yamlMappings = props.mappings ? yaml.safeDump(props.mappings) : "";
-
-            return {
-                lastUpdateDate: props.updateDate,
-                editorValue: yamlMappings
-            }
-        }
-
-        return null;
+class AgentMappingView extends React.Component {
+  constructor(props){
+    super(props);
+    this.state = {
+      filter: '',
+      isSaveDisabled: true,
+      mapping: {}
     }
+  }
 
-    state = {
-        lastUpdateDate: null,
-        editorValue: "",
-        yamlError: null
-    }
+  handleFilterChange = (e) => this.setState({filter: e.target.value});
 
-    componentDidMount() {
-        this.onRefresh();
-    }
+  handleDisableSaveOptionChange = (bool) => this.setState({isSaveDisabled: bool});
+  
+  showRefreshDialog = () => this.setState({ isRefreshDialogShown: true });
+  hideRefreshDialog = () => this.setState({ isRefreshDialogShown: false });
 
-    onSave = (content) => {
-        try {
-            const mappings = yaml.safeLoad(content);
+  showDeleteMappingDialog = (mapping) => this.setState({isDeleteDialogShown: true, mapping: mapping});
+  hideDeleteMappingDialog = () => this.setState({isDeleteDialogShown: false, mapping: {}});
 
-            // to prevent editor resets
-            this.setState({
-                editorContent: content
-            });
+  showEditMappingDialog = (mapping = {}) => this.setState({isEditDialogShown: true, mapping: mapping} );
+  hideEditMappingDialog = () => this.setState({isEditDialogShown: false, mapping: {} });
 
-            this.props.putMappings(mappings);
-        } catch (error) {
-            if (error.name && error.name === "YAMLException") {
-                const { message } = error;
-                this.props.showWarning("YAML Syntax Error", "Error: " + message);
-            }
-        }
-    }
+  showDownloadDialog = () => this.setState({isDownloadDialogShown: true});
+  hideDownloadDialog = () => this.setState({isDownloadDialogShown: false});
 
-    onRefresh = () => {
-        this.props.fetchMappings();
-    }
-
-    onChange = (value) => {
-        this.setState({
-            editorValue: value
-        });
-
-        let errorMessage = null;
-        try {
-            yaml.safeLoad(value);
-        } catch (error) {
-            errorMessage = "YAML cannot be parsed.";
-            if (error.message) {
-                errorMessage = "YAML Syntax Error: " + error.message;
-            }
-        }
-        this.setState({
-            yamlError: errorMessage
-        });
-    }
-
-    render = () => {
-        const { loading } = this.props;
-        const { editorValue, yamlError } = this.state;
-        return (
-            <>
-                <style jsx>{`
-                .this {
-                    height: 100%;
-                    display: flex;
-                }
-                .header {
-                    font-size: 1rem;
-                    display: flex;
-                    align-items: center;
-                    height: 2rem;
-                }
-                .header :global(.pi) {
-                    font-size: 1.75rem;
-                    color: #aaa;
-                    margin-right: 1rem;
-                }
-                `}</style>
-                <div className="this">
-                    <EditorView
-                        value={editorValue}
-                        onSave={this.onSave}
-                        onRefresh={this.onRefresh}
-                        enableButtons={!loading}
-                        onChange={this.onChange}
-                        isErrorNotification={true}
-                        canSave={!yamlError}
-                        notificationIcon="pi-exclamation-triangle"
-                        notificationText={yamlError}>
-                        <div className="header">
-                            <i className="pi pi-sitemap"></i>
-                            <div>Agent Mappings</div>
-                        </div>
-                    </EditorView>
-                </div>
-            </>
-        );
-    }
-};
-
-function mapStateToProps(state) {
-    const { pendingRequests, mappings, updateDate } = state.mappings;
-    return {
-        loading: pendingRequests > 0,
-        mappings,
-        updateDate
-    }
+  render(){
+    return (
+      <div className='this'>
+        <style jsx>{`
+          .fixed-toolbar{
+            position: fixed;
+            top: 4rem;
+            width: calc(100vw - 4rem);
+          }
+          .content{
+            margin-top: 3rem;
+            height: calc(100vh - 7rem);
+            overflow: auto auto;
+          }
+        `}</style>
+        <div className='fixed-toolbar'>
+          <MappingsToolbar 
+            filterValue={this.state.filter} 
+            onChangeFilter={this.handleFilterChange} 
+            isSaveDisabled={this.state.isSaveDisabled} 
+            onClickRefresh={this.showRefreshDialog} 
+            onAddNewMapping={this.showEditMappingDialog}
+            onDownload={this.showDownloadDialog}
+          />
+        </div>
+        <div className='content'>
+          <MappingsTable 
+            filterValue={this.state.filter} 
+            onMappingsChanged={this.handleDisableSaveOptionChange}
+            onDeleteMapping={this.showDeleteMappingDialog} 
+            onEditMapping={this.showEditMappingDialog}
+          />
+        </div>
+        <RefreshDialog  
+          visible={this.state.isRefreshDialogShown} 
+          onHide={this.hideRefreshDialog} 
+        />
+        <DeleteDialog 
+          visible={this.state.isDeleteDialogShown} 
+          onHide={this.hideDeleteMappingDialog} 
+          mapping={this.state.mapping} 
+        />
+        <EditDialog 
+          visible={this.state.isEditDialogShown}
+          onHide={this.hideEditMappingDialog}
+          mapping={this.state.mapping}
+        />
+        <DownloadDialog 
+          visible={this.state.isDownloadDialogShown}
+          onHide={this.hideDownloadDialog}
+        />
+      </div>
+    )
+  }
 }
 
-const mapDispatchToProps = {
-    fetchMappings: mappingsActions.fetchMappings,
-    putMappings: mappingsActions.putMappings,
-    showWarning: notificationActions.showWarningMessage
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(AgentMappingsView);
+export default AgentMappingView

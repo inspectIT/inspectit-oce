@@ -18,7 +18,7 @@ import javax.persistence.*;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(indexes = @Index(columnList = "username", unique = true))
+@Table(name = "users", indexes = @Index(columnList = "username", unique = true))
 public class User {
 
     @Id

@@ -41,7 +41,7 @@ public class DefaultConfigFileLoader {
     /**
      * Default constructor that sets the defaultFolderPath when an instance of this object is created.
      */
-    public void DefaultConfigFileLoader() throws IOException {
+    public DefaultConfigFileLoader() throws IOException {
         setDefaultFolderPath();
     }
 

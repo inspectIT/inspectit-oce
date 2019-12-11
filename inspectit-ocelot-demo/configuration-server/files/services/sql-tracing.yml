@@ -50,3 +50,4 @@ inspectit:
         entry:
           sql:
             action: hsqldb_prepared_statement_get_sql
+           

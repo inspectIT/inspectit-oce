@@ -28,6 +28,12 @@ inspectit:
           kind: SERVER
           start-span-conditions:
             only-if-true: http_is_entry
+          
+          # kieker addon attributes
+          attributes:
+            eoi: dummyEoi
+            ess: dummyEss
+            
         entry:
           span_name:
             action: string_concat_3
@@ -36,6 +42,26 @@ inspectit:
               c: http_raw_path
             constant-input:
               b: " "
+          
+          # kieker entry addon start
+          executionOrder:
+            action: increase_execution_order
+            data-input:
+              current: executionOrder
+          stackDepth:
+            action: increase_stack_depth
+            data-input:
+              current: stackDepth
+          
+          dummyEoi:
+            action: set
+            data-input:
+              value: executionOrder
+          dummyEss:
+            action: set
+            data-input:
+              value: stackDepth
+          # kieker entry addon end
        
       http_client_apache_client:
         tracing:
@@ -44,6 +70,12 @@ inspectit:
           kind: CLIENT
           start-span-conditions:
             only-if-true: http_is_entry   
+            
+          # kieker addon attributes
+          attributes:
+            eoi: dummyEoi
+            ess: dummyEss
+            
         entry:
           span_name:
             action: string_concat_3
@@ -52,6 +84,25 @@ inspectit:
               c: http_raw_path
             constant-input:
               b: " "
+          # kieker entry addon start
+          executionOrder:
+            action: increase_execution_order
+            data-input:
+              current: executionOrder
+          stackDepth:
+            action: increase_stack_depth
+            data-input:
+              current: stackDepth
+          
+          dummyEoi:
+            action: set
+            data-input:
+              value: executionOrder
+          dummyEss:
+            action: set
+            data-input:
+              value: stackDepth
+          # kieker entry addon end
       
       httpurlconnection_tracing_start:
         scopes:
@@ -64,6 +115,12 @@ inspectit:
           end-span: false
           name: span_name
           kind: CLIENT
+          
+          # kieker addon attributes
+          attributes:
+            eoi: dummyEoi
+            ess: dummyEss
+            
         entry:            
           span_obj:
             action: read_attachment_on_this
@@ -79,6 +136,27 @@ inspectit:
               c: http_raw_path
             constant-input:
               b: " "
+              
+          # kieker entry addon start
+          executionOrder:
+            action: increase_execution_order
+            data-input:
+              current: executionOrder
+          stackDepth:
+            action: increase_stack_depth
+            data-input:
+              current: stackDepth
+          
+          dummyEoi:
+            action: set
+            data-input:
+              value: executionOrder
+          dummyEss:
+            action: set
+            data-input:
+              value: stackDepth
+          # kieker entry addon end
+          
         post-entry:
           span_obj:
             action: replace_attachment_on_this
@@ -99,6 +177,12 @@ inspectit:
             only-if-true: httpurlconn_get_is_entry
           name: span_name
           kind: CLIENT
+          
+          # kieker addon attributes
+          attributes:
+            eoi: dummyEoi
+            ess: dummyEss
+            
         entry:
           httpurlconn_get_is_entry:
             action: test_and_set_this_marker
@@ -117,8 +201,32 @@ inspectit:
               c: http_raw_path
             constant-input:
               b: " "
+              
+          # kieker entry addon start
+          executionOrder:
+            action: increase_execution_order
+            data-input:
+              current: executionOrder
+          stackDepth:
+            action: increase_stack_depth
+            data-input:
+              current: stackDepth
+          
+          dummyEoi:
+            action: set
+            data-input:
+              value: executionOrder
+          dummyEss:
+            action: set
+            data-input:
+              value: stackDepth
+          # kieker entry addon end
+          
         post-entry:
           span_obj:
             action: replace_attachment_on_this
             constant-input: {key: "span"}
             data-input: {value: span_obj}
+            
+          
+        

@@ -7,3 +7,6 @@ inspectit:
     frequency: 1s
   logging:
     debug: false # set to true to see more details in the agents logs
+    
+  plugins:
+    path: /share

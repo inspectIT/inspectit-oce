@@ -43,6 +43,7 @@
       "config-server/user-authentication"
     ],
     "Breaking Changes": [
+      "breaking-changes/0-7",
       "breaking-changes/0-6",
       "breaking-changes/0-5",
       "breaking-changes/0-4"

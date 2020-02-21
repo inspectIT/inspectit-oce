@@ -86,7 +86,7 @@ class ConfigurationView extends React.Component {
     }
 
     render() {
-        const { selection, isDirectory, loading, isContentModified, fileContent, yamlError, selectedDefaultConfigFile } = this.props;
+        const { selection, isDirectory, loading, isContentModified, fileContent, yamlError, selectedDefaultConfigFile, schema, propsSplit, togglePropsSplitView } = this.props;
         const showEditor = (selection || selectedDefaultConfigFile) && !isDirectory;
 
         const { path, name } = this.parsePath(selection, selectedDefaultConfigFile);
@@ -130,6 +130,7 @@ class ConfigurationView extends React.Component {
                 <EditorView
                     showEditor={showEditor}
                     value={fileContent}
+                    schema={schema}
                     hint={"Select a file to start editing."}
                     onSave={this.onSave}
                     enableButtons={showEditor && !loading}
@@ -141,7 +142,10 @@ class ConfigurationView extends React.Component {
                     notificationIcon="pi-exclamation-triangle"
                     notificationText={yamlError}
                     loading={loading}
-                    readOnly={!!selectedDefaultConfigFile}>
+                    readOnly={!!selectedDefaultConfigFile}
+                    propsSplit={propsSplit}
+                    onPropsSplit={togglePropsSplitView}
+                >
                     {showHeader ? <EditorHeader icon={icon} path={path} name={name} isContentModified={isContentModified} readOnly={!!selectedDefaultConfigFile} /> : null}
                 </EditorView>
             </div>
@@ -163,7 +167,7 @@ const getYamlError = (content) => {
 }
 
 function mapStateToProps(state) {
-    const { updateDate, selection, selectedFileContent, pendingRequests, selectedDefaultConfigFile } = state.configuration;
+    const { updateDate, selection, selectedFileContent, pendingRequests, selectedDefaultConfigFile, schema, propsSplitConfigurationView } = state.configuration;
     const unsavedFileContent = selection ? configurationSelectors.getSelectedFileUnsavedContents(state) : null;
     const fileContent = unsavedFileContent != null ? unsavedFileContent : selectedFileContent;
 
@@ -176,13 +180,16 @@ function mapStateToProps(state) {
         yamlError: getYamlError(fileContent),
         loading: pendingRequests > 0,
         selectedDefaultConfigFile,
+        schema,
+        propsSplit: propsSplitConfigurationView
     }
 }
 
 const mapDispatchToProps = {
     showWarning: notificationActions.showWarningMessage,
     writeFile: configurationActions.writeFile,
-    selectedFileContentsChanged: configurationActions.selectedFileContentsChanged
+    selectedFileContentsChanged: configurationActions.selectedFileContentsChanged,
+    togglePropsSplitView: configurationActions.togglePropsSplitView
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ConfigurationView);

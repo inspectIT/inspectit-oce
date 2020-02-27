@@ -16,11 +16,14 @@ const TreeTableEditor = dynamic(() => import('./TreeTableEditor'), { ssr: false 
 class EditorView extends React.Component {
 
     handleSave = () => {
-        this.props.onSave(this.editor.getValue());
+        // TODO should this be handled by the configuration view?
+        // since there is value call back, there's no need to get the value from the text editor
+        // in addition this was failing with the visual editor now
+        this.props.onSave(this.props.value);
     }
 
     render() {
-        const { value, schema, showEditor, hint, onRefresh, onChange, onCreate, isRefreshing, enableButtons, isErrorNotification, notificationIcon, notificationText, canSave, loading, children, readOnly, showVisualConfigurationView, onToggleVisualConfigurationView } = this.props;
+        const { value, schema, showEditor, hint, onRefresh, onChange, onCreate, isRefreshing, enableButtons, isErrorNotification, notificationIcon, notificationText, canSave, loading, children, readOnly, showVisualConfigurationView, onToggleVisualConfigurationView, onPropValueChange } = this.props;
 
         return (
             <div className="this p-grid p-dir-col p-nogutter">
@@ -80,7 +83,13 @@ class EditorView extends React.Component {
                 {
                     showEditor && showVisualConfigurationView &&
                     <div className="p-col visual-editor-container">
-                        <TreeTableEditor value={value} schema={schema} loading={loading}/>
+                        <TreeTableEditor 
+                            value={value} 
+                            schema={schema} 
+                            loading={loading}
+                            readOnly={readOnly}
+                            onPropValueChange={onPropValueChange}
+                        />
                     </div>
                 }
                 {
@@ -142,6 +151,8 @@ EditorView.propTypes = {
     showVisualConfigurationView: PropTypes.bool,
     /** Function to react on the change of the enable disable visual configuration view */
     onToggleVisualConfigurationView: PropTypes.func,
+    /** Function to to invoke with property is update via the properties split view */
+    onPropValueChange: PropTypes.func,
 }
 
 EditorView.defaultProps = {

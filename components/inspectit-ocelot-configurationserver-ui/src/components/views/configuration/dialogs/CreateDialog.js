@@ -126,6 +126,7 @@ class CreateDialog extends React.Component {
             this.props.createDirectory(fullPath, true);
         } else {
             this.props.writeFile(fullPath, "", true);
+            this.props.selectFile(fullPath);
         }
         this.props.onHide();
     }
@@ -160,6 +161,7 @@ function mapStateToProps(state) {
 
 const mapDispatchToProps = {
     writeFile: configurationActions.writeFile,
+    selectFile: configurationActions.selectFile,
     createDirectory: configurationActions.createDirectory,
 }
 

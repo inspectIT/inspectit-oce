@@ -6,15 +6,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
 import rocks.inspectit.ocelot.file.FileInfo;
 import rocks.inspectit.ocelot.file.FileManager;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,31 +31,6 @@ public class ConfigurationFilesCacheTest {
     FileManager fileManager;
 
     @Nested
-    public class LoadYamlFile {
-        @Test
-        public void testLoadYaml() throws IOException {
-            String testPath = "mockPath";
-            String yamlContent = "i am a:\n        - test\n        - yaml";
-            when(fileManager.readFile(any())).thenReturn(yamlContent);
-
-            LinkedHashMap<Object, Object> output = (LinkedHashMap<Object, Object>) configurationFilesCache.loadYamlFile(testPath);
-
-            assertThat(output).hasSize(1)
-                    .containsEntry("i am a", Arrays.asList("test", "yaml"));
-        }
-
-        @Test
-        public void fileManagerReturnsNull() throws IOException {
-            String testPath = "mockPath";
-            when(fileManager.readFile(any())).thenReturn(null);
-
-            Object output = configurationFilesCache.loadYamlFile(testPath);
-
-            assertThat(output).isEqualTo(null);
-        }
-    }
-
-    @Nested
     public class GetAllPaths {
         @Test
         public void getYamlPaths() throws IOException {
@@ -69,24 +43,11 @@ public class ConfigurationFilesCacheTest {
             List<FileInfo> mockInfoList = Arrays.asList(mockFileInfo, mockFileInfo2);
             when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
 
-            List<String> paths = configurationFilesCache.getAllPaths();
+            List<String> output = configurationFilesCache.getAllPaths();
 
-            assertThat(paths.size()).isEqualTo(2);
-            assertThat(paths.contains("path/a.yml")).isTrue();
-            assertThat(paths.contains("path/b.yaml")).isTrue();
-        }
-
-        @Test
-        public void containsNonYamlFile() throws IOException {
-            FileInfo mockFileInfo = Mockito.mock(FileInfo.class);
-            Stream<String> streamA = Stream.of("path/a.xml");
-            when(mockFileInfo.getAbsoluteFilePaths(any())).thenReturn(streamA);
-            List<FileInfo> mockInfoList = Arrays.asList(mockFileInfo);
-            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
-
-            List<String> paths = configurationFilesCache.getAllPaths();
-
-            assertThat(paths.size()).isEqualTo(0);
+            assertThat(output.size()).isEqualTo(2);
+            assertThat(output.contains("path/a.yml")).isTrue();
+            assertThat(output.contains("path/b.yaml")).isTrue();
         }
     }
 
@@ -120,13 +81,95 @@ public class ConfigurationFilesCacheTest {
         }
 
         @Test
-        public void errorOnLoading() throws IOException {
+        public void exceptionOnLoading() throws IOException {
             configurationFilesCache.loadFiles();
             Collection<Object> before = configurationFilesCache.getParsedConfigurationFiles();
+            when(fileManager.readFile(any())).thenThrow(new IOException());
+            FileInfo mockFileInfo = Mockito.mock(FileInfo.class);
+            Stream<String> streamA = Stream.of("wrong.path");
+            when(mockFileInfo.getAbsoluteFilePaths(any())).thenReturn(streamA);
+            List<FileInfo> mockInfoList = Collections.singletonList(mockFileInfo);
+            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
+
             configurationFilesCache.loadFiles();
             Collection<Object> output = configurationFilesCache.getParsedConfigurationFiles();
 
             assertThat(before).isEqualTo(output);
+        }
+    }
+
+    @Nested
+    public class GetParsedConfigurationFiles {
+        @Test
+        public void loadsYamlFile() throws IOException {
+            FileInfo mockFileInfo = Mockito.mock(FileInfo.class);
+            Stream<String> streamA = Stream.of("path/a.yaml");
+            when(mockFileInfo.getAbsoluteFilePaths(any())).thenReturn(streamA);
+            List<FileInfo> mockInfoList = Collections.singletonList(mockFileInfo);
+            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
+            when(fileManager.readFile(any())).thenReturn("mock:");
+            HashMap<String, Object> excpectedHashMap = new HashMap<>();
+            excpectedHashMap.put("mock", null);
+
+            configurationFilesCache.loadFiles();
+            Collection<Object> output = configurationFilesCache.getParsedConfigurationFiles();
+
+            assertThat(output).contains(excpectedHashMap);
+        }
+
+        @Test
+        public void ignoresNonYamlFile() throws IOException {
+            FileInfo mockFileInfo = Mockito.mock(FileInfo.class);
+            Stream<String> streamA = Stream.of("path/a.xml");
+            when(mockFileInfo.getAbsoluteFilePaths(any())).thenReturn(streamA);
+            List<FileInfo> mockInfoList = Collections.singletonList(mockFileInfo);
+            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
+            when(fileManager.readFile(any())).thenReturn("mock:");
+            HashMap<String, Object> excpectedHashMap = new HashMap<>();
+            excpectedHashMap.put("mock", null);
+
+            configurationFilesCache.loadFiles();
+            Collection<Object> output = configurationFilesCache.getParsedConfigurationFiles();
+
+            assertThat(output).doesNotContain(excpectedHashMap);
+        }
+    }
+
+    @Nested
+    public class GetFiles {
+        @Test
+        public void loadFiles() throws IOException {
+            FileInfo mockFileInfo = Mockito.mock(FileInfo.class);
+            Stream<String> streamA = Stream.of("path/a.yml");
+            when(mockFileInfo.getAbsoluteFilePaths(any())).thenReturn(streamA);
+            FileInfo mockFileInfo2 = Mockito.mock(FileInfo.class);
+            Stream<String> streamB = Stream.of("path/b.xml");
+            when(mockFileInfo2.getAbsoluteFilePaths(any())).thenReturn(streamB);
+            List<FileInfo> mockInfoList = Arrays.asList(mockFileInfo, mockFileInfo2);
+            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
+            when(fileManager.readFile(any())).thenAnswer(new Answer<String>() {
+                @Override
+                public String answer(InvocationOnMock invocation) throws Throwable {
+                    Object[] args = invocation.getArguments();
+                    String input = (String) args[0];
+                    if (input.equals("path/a.yml")) {
+                        return ("a");
+                    }
+                    if (input.equals("path/b.xml")) {
+                        return ("b");
+                    }
+                    return "error";
+                }
+            });
+
+            configurationFilesCache.loadFiles();
+            HashMap<String, String> output = configurationFilesCache.getFiles();
+
+            assertThat(output).containsKey("path/a.yml");
+            assertThat(output).containsKey("path/b.xml");
+            assertThat(output.get("path/a.yml")).isEqualTo("a");
+            assertThat(output.get("path/b.xml")).isEqualTo("b");
+            assertThat(output).doesNotContainValue("error");
         }
     }
 }

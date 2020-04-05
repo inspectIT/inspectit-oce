@@ -12,13 +12,9 @@ import rocks.inspectit.ocelot.file.FileManager;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @Component
@@ -32,7 +28,9 @@ public class ConfigurationFilesCache {
     @Autowired
     private FileManager fileManager;
 
-    private Collection<Object> yamlContents;
+    private Collection<Object> yamlContents = new ArrayList<>();
+
+    private HashMap<String, String> fileContents = new HashMap<>();
 
     /**
      * Returns the most recently loaded .yaml and .yml files as a list of Objects. Each Object resembles the corresponding
@@ -56,20 +54,45 @@ public class ConfigurationFilesCache {
     }
 
     /**
+     * Returns the most recently loaded files as key value pairs resembling the path to the file and its contents.
+     *
+     * @return A HashMap in which all keys resemble a path to a file. The respective contents resemble the files
+     * content.
+     */
+    public HashMap<String, String> getFiles() {
+        return fileContents;
+    }
+
+    /**
      * Loads all .yaml and .yml files. The files are loaded from the "configuration" folder of the server and from the
      * "files" folder of the working directory. The files contents are parsed into either nested Lists or Maps.
      */
     @PostConstruct
     @EventListener(FileChangedEvent.class)
     public void loadFiles() throws IOException {
-        List<String> filePaths = getAllPaths();
-        yamlContents = Stream.concat(
-                filePaths.stream()
-                        .map(this::loadYamlFile)
-                        .filter(Objects::nonNull),
-                ConfigFileLoader.getDefaultConfigFiles().values().stream()
-                        .map(this::parseYaml)
-        ).collect(Collectors.toList());
+        loadFileContents();
+        loadYamlContents();
+    }
+
+    /**
+     * Loads all .yaml and .yml files and saves them as instances of the Yaml class. Before this method is executed,
+     * loadFileContents should be executed at least once.
+     */
+    private void loadYamlContents() {
+        yamlContents = fileContents.keySet().stream().filter(HAS_YAML_ENDING)
+                .map(key -> parseStringToYamlObject(fileContents.get(key)))
+                .filter(o -> o instanceof Map || o instanceof List)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Loads all files and saves them as key value pairs consisting of the files path and its contents.
+     */
+    private void loadFileContents() throws IOException {
+        fileContents = loadFilesAsMap(getAllPaths().stream()
+                .filter(path -> !path.startsWith(".git"))
+                .collect(Collectors.toList()));
+        fileContents.putAll(ConfigFileLoader.getDefaultConfigFiles());
     }
 
     /**
@@ -82,32 +105,9 @@ public class ConfigurationFilesCache {
      * @param content The String to be parsed.
      * @return The String parsed into a nested Lists or Map.
      */
-    private Object parseYaml(String content) {
+    private Object parseStringToYamlObject(String content) {
         Yaml yaml = new Yaml();
         return yaml.load(content);
-    }
-
-    /**
-     * This method loads a .yaml or .yml file found in a given path and returns it either as nested List or Map.
-     * The Map/List can either contain a terminal value such as Strings, Lists of elements or Maps. The latter two
-     * of which can each again contain Lists, Maps or terminal values as values.
-     *
-     * @param path path of the file which should be loaded.
-     * @return the file as an Object parsed as described above.
-     */
-    @VisibleForTesting
-    Object loadYamlFile(String path) {
-        String src;
-        try {
-            src = fileManager.readFile(path);
-        } catch (IOException e) {
-            log.warn("Unable to load file with path {}", path);
-            return null;
-        }
-        if (src != null) {
-            return parseYaml(src);
-        }
-        return null;
     }
 
     /**
@@ -121,11 +121,45 @@ public class ConfigurationFilesCache {
         try {
             return fileManager.getFilesInDirectory("", true).stream()
                     .flatMap(f -> f.getAbsoluteFilePaths(""))
-                    .filter(HAS_YAML_ENDING)
                     .sorted()
                     .collect(Collectors.toList());
         } catch (Exception e) {
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * Takes a list of paths to files as strings as attribute. Loads these files and puts the path and the files content
+     * as key value pair into a HashMap and returns it. Removes all "\r" escape sequences from the files contents.
+     *
+     * @param paths A list of paths to files which should be loaded.
+     * @return The paths and the contents of the corresponding files as key value pair in a HashMap.
+     */
+    private HashMap<String, String> loadFilesAsMap(List<String> paths) {
+        HashMap<String, String> map = new HashMap<>();
+        for (String path : paths) {
+            String content = loadContent(path).replace("\r", "");
+            if (!content.equals("")) {
+                map.put(path, content);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * Takes a String resembling a path and returns the content of the file found under the given path. Returns an empty
+     * String if the file does not exist or an error occurs during loading.
+     *
+     * @param path The path to the file which should be loaded.
+     * @return The content of the file found under the given path.
+     */
+    private String loadContent(String path) {
+        String content = "";
+        try {
+            content = fileManager.readFile(path);
+        } catch (IOException e) {
+            log.warn("Unable to load file with path {}", path);
+        }
+        return content;
     }
 }

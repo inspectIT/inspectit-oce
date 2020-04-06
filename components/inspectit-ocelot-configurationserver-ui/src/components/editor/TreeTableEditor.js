@@ -1,16 +1,14 @@
-import { Checkbox } from 'primereact/checkbox';
+import lodash from 'lodash';
+import { Button } from 'primereact/button';
 import { Column } from "primereact/column";
 import { ColumnGroup } from 'primereact/columngroup';
 import { InputText } from 'primereact/inputtext';
-import { Button } from 'primereact/button';
 import { Menubar } from 'primereact/menubar';
 import { Message } from 'primereact/message';
 import { Row } from 'primereact/row';
 import { TreeTable } from 'primereact/treetable';
 import PropTypes from 'prop-types';
-import React, { useState } from 'react';
-import lodash from 'lodash';
-import { Dropdown } from 'primereact/dropdown';
+import React from 'react';
 
 
 
@@ -290,7 +288,7 @@ class TreeTableEditor extends React.Component {
     }
 
     /** Editor for string values */
-    StringEditor = ({ node, onPropValueChange, onPropValueRemove }) => {
+    StringEditor = ({ node, onPropValueChange, onPropValueRemove, noWrapping }) => {
         const defaultValue = node.value;
 
         // when getting empty value in the text input
@@ -300,15 +298,24 @@ class TreeTableEditor extends React.Component {
             onPropValueChange(node.key, updateValue);
         }
 
-        return this.wrapWithExtras(
-            (isNull, _) => (<InputText type="text" defaultValue={defaultValue} onChange={onChange} className="value-column" disabled={isNull} />),
-            {
-                node,
-                defaultSupplier: () => defaultValue && defaultValue || '',
-                onPropValueChange,
-                onPropValueRemove
-            }
-        );
+        const component = (isNull) => (<InputText type="text" defaultValue={defaultValue} onChange={onChange} className="value-column" disabled={isNull} />);
+
+        // in case of no wrapping return only component
+        // this is useful when combining into other editors
+        if (noWrapping) {
+            return component(defaultValue === null)
+        } else {
+
+            return this.wrapWithExtras(
+            component,
+                {
+                    node,
+                    defaultSupplier: () => defaultValue && defaultValue || '',
+                    onPropValueChange,
+                    onPropValueRemove
+                }
+            );
+        }
     }
 
     /** Editor for numbers */
@@ -344,20 +351,31 @@ class TreeTableEditor extends React.Component {
     /** Editor for booleans */
     BooleanEditor = ({ node, onPropValueChange, onPropValueRemove }) => {
         const defaultValue = node.value;
-        const [value, setValue] = useState(defaultValue);
-
-        // if a boolean can be nullable, then we allow the unchecking of the checkbox
-        const onChange = (e) => {
-            const value = e.value;
-            setValue(value);
-            onPropValueChange(node.key, value);
-        };
+        const custom = defaultValue !== null && defaultValue !== undefined && defaultValue !== true && defaultValue !== false;
 
         return this.wrapWithExtras(
-            (isNull, _) => (<Dropdown value={value} options={booleanDropdownOptions} onChange={onChange} editable={true} placeholder="Select the value" disabled={isNull} />),
+            (isNull, isDefined) => (
+                <>
+                    {
+                        !custom &&
+                        <>
+                            <Button label="Yes" onClick={() => onPropValueChange(node.key, true)} className={defaultValue !== true && "p-button-secondary"} />
+                            <Button label="No" onClick={() => onPropValueChange(node.key, false)} className={defaultValue !== false && "p-button-secondary"} />
+                            <Button label="Custom" onClick={() => onPropValueChange(node.key, "")} className={"p-button-secondary"} />
+                        </>
+                    }
+                    {
+                        custom &&
+                        <>
+                            <this.StringEditor node={node} onPropValueChange={onPropValueChange} onPropValueRemove={onPropValueRemove} noWrapping />
+                            <Button label="Yes/No" onClick={() => onPropValueChange(node.key, true)} className={"p-button-secondary"} />
+                        </>
+                    }
+                </>
+            ),
             {
                 node,
-                defaultSupplier: () => defaultValue && defaultValue || '',
+                defaultSupplier: () => defaultValue && defaultValue || true,
                 onPropValueChange,
                 onPropValueRemove
             }

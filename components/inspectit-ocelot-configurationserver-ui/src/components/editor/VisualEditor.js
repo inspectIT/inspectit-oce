@@ -1,10 +1,8 @@
 import yaml from 'js-yaml';
+import { Button } from 'primereact/button';
+import { Dialog } from 'primereact/dialog';
 import PropTypes from 'prop-types';
 import React from 'react';
-import { Dialog } from 'primereact/dialog';
-import { Button } from 'primereact/button';
-
-const NON_NORMALIZED_WARNING_SKIP = 'VisualEditor/NON_NORMALIZED_WARNING_SKIP'
 
 class VisualEditor extends React.Component {
 
@@ -54,21 +52,11 @@ class VisualEditor extends React.Component {
     if (this.state.normalized) {
       doUpdate();
     } else {
-      const skipWarn = localStorage.getItem(NON_NORMALIZED_WARNING_SKIP);
-      if (skipWarn) {
-        doUpdate();
-      } else {
-        this.setState({
-          showWarn: true,
-          pendingConfigUpdate: updatedYamlConfig
-        })
-      }
+      this.setState({
+        showWarn: true,
+        pendingConfigUpdate: updatedYamlConfig
+      });
     }
-  }
-
-  normalizedDoAcceptAndSave = () => {
-    localStorage.setItem(NON_NORMALIZED_WARNING_SKIP, true);
-    this.normalizedDoAccept();
   }
 
   normalizedDoAccept = () => {
@@ -107,7 +95,6 @@ class VisualEditor extends React.Component {
           header="Config file overwrite"
           footer={
             <div>
-              <Button label="Yes and remember" icon="pi pi-check" onClick={this.normalizedDoAcceptAndSave} />
               <Button label="Yes" icon="pi pi-check" onClick={this.normalizedDoAccept} />
               <Button label="No" icon="pi pi-times" onClick={this.normalizedDoDecline} />
             </div>

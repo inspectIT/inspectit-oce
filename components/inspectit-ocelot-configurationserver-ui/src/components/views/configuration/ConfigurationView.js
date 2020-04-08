@@ -92,41 +92,6 @@ class ConfigurationView extends React.Component {
         }
     }
 
-    onPropValueChange = (key, value) => {
-        // split content in lines
-        // split key in segments
-        // iterate over all lines finding the line that matches the requested line
-        // note that this algorithm does not work if key is missing from in the YAML content
-        // null values are added as null and not removed
-
-        const { fileContent } = this.props;
-        const fileContentLines = fileContent.match(/[^\r\n]+/g);
-        const keysSplit = key.split('.');
-        this.replaceKeyLine(fileContentLines, keysSplit, value, 0, 0);
-        this.props.selectedFileContentsChanged(fileContentLines.join('\n'));
-    }
-
-    /** this is O(N/2) algorithm */
-    replaceKeyLine = (fileContentLines, keysSplit, value, line, level) => {
-        const keyPrefix = " ".repeat(level * 2);
-        const toMatch = `${keyPrefix}${keysSplit[level]}:`
-
-        for (let i = line; i < fileContentLines.length; i++) {
-            const current = fileContentLines[i];
-            if (current.startsWith(toMatch)) {
-                // this is where we found the line to update
-                if (level === keysSplit.length - 1) {
-                    fileContentLines[i] = `${toMatch} ${value}`
-                } else {
-                    // go deeper
-                    this.replaceKeyLine(fileContentLines, keysSplit, value, i + 1, level + 1);
-                }
-                // break when we found it
-                break;
-            }
-        }
-    }
-
     onRefresh = () => {
         this.props.selectedFileContentsChanged(null);
     }
@@ -218,7 +183,6 @@ class ConfigurationView extends React.Component {
                     readOnly={!!selectedDefaultConfigFile}
                     showVisualConfigurationView={showVisualConfigurationView}
                     onToggleVisualConfigurationView={toggleVisualConfigurationView}
-                    onPropValueChange={this.onPropValueChange}
                 >
                     {showHeader ? <EditorHeader icon={icon} path={path} name={name} isContentModified={isContentModified} readOnly={!!selectedDefaultConfigFile} /> : null}
                 </EditorView>

@@ -28,9 +28,14 @@ class VisualEditor extends React.Component {
 
   parseAndUpdateState = () => {
     try {
-      const config = yaml.safeLoad(this.props.yamlConfig);
-      const normalized = yaml.safeDump(config) === this.props.yamlConfig;
+      let config = {};
+      let normalized = true;
 
+      if (this.props.yamlConfig && this.props.yamlConfig.length > 0) {
+        config = yaml.safeLoad(this.props.yamlConfig);
+        normalized = yaml.safeDump(config) === this.props.yamlConfig;
+      }
+    
       this.setState({
         isError: false,
         config,

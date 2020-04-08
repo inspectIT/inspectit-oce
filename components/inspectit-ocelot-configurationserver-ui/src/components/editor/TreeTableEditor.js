@@ -1,4 +1,4 @@
-import lodash from 'lodash';
+import { cloneDeep, isEqual, set, unset } from 'lodash';
 import { Button } from 'primereact/button';
 import { Column } from "primereact/column";
 import { ColumnGroup } from 'primereact/columngroup';
@@ -9,8 +9,6 @@ import { Row } from 'primereact/row';
 import { TreeTable } from 'primereact/treetable';
 import PropTypes from 'prop-types';
 import React from 'react';
-
-
 
 // helper for a schema property type constants
 const schemaType = {
@@ -23,19 +21,16 @@ const schemaType = {
     ENUM: 'ENUM'
 }
 
-
 const booleanDropdownOptions = [
     { label: 'Yes', value: true },
     { label: 'No', value: false }
 ];
-
 
 /**
  * Editor for showing the config file as the table tree.
  * 
  * TODO what about duration
  * TODO what about enums (select box, but not used)
- * TODO what about the depending props - f.e. ${inspectit.something.something}
  * TODO what about the multiline strings
  */
 class TreeTableEditor extends React.Component {
@@ -66,11 +61,15 @@ class TreeTableEditor extends React.Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (!lodash.isEqual(prevProps.config, this.props.config)) {
+        if (!isEqual(prevProps.config, this.props.config)) {
             this.regenerateData();
         }
     }
 
+    /**
+     * Processes the config json against the schema and creates the data for the tree table.
+     * In addition collects all key ids in order to have them all expanded by default.
+     */
     regenerateData = () => {
         const allKeys = {};
         if (this.props.config) {
@@ -114,8 +113,8 @@ class TreeTableEditor extends React.Component {
 
                     // if we found schema properties create data and push to resulting array
                     if (schemaProperty) {
-                        const isComposite = schemaProperty.type === schemaType.COMPOSITE;
-                        const keyIdentifier = parentKeyIdentifier !== undefined ? parentKeyIdentifier + "." + schemaProperty.propertyName : schemaProperty.propertyName;
+                        const isComposite = this.isComposite(schemaProperty);
+                        const keyIdentifier = this.getKeyIdentifier(schemaProperty.propertyName, parentKeyIdentifier);
                         const children = isComposite && this.processKey(configValue, schemaProperty.children, keysCollector, keyIdentifier) || undefined;
 
                         const data = {
@@ -135,7 +134,7 @@ class TreeTableEditor extends React.Component {
                         result.push(data);
                         keysCollector[keyIdentifier] = true;
                     } else {
-                        const keyIdentifier = parentKeyIdentifier !== undefined ? parentKeyIdentifier + "." + congfigKey : congfigKey;
+                        const keyIdentifier = this.getKeyIdentifier(congfigKey, parentKeyIdentifier);
                         const data = {
                             key: keyIdentifier,
                             selectable: false,
@@ -157,8 +156,8 @@ class TreeTableEditor extends React.Component {
                 schemaObjects
                     .filter(schemaProperty => processedKeys.indexOf(schemaProperty.propertyName) === -1)
                     .forEach(schemaProperty => {
-                        const isComposite = schemaProperty.type === schemaType.COMPOSITE;
-                        const keyIdentifier = parentKeyIdentifier !== undefined ? parentKeyIdentifier + "." + schemaProperty.propertyName : schemaProperty.propertyName;
+                        const isComposite = this.isComposite(schemaProperty);
+                        const keyIdentifier = this.getKeyIdentifier(schemaProperty.propertyName, parentKeyIdentifier);
                         const children = isComposite && this.processKey(undefined, schemaProperty.children, keysCollector, keyIdentifier) || undefined;
 
                         const data = {
@@ -169,7 +168,7 @@ class TreeTableEditor extends React.Component {
                             data: {
                                 name: schemaProperty.readableName,
                                 type: this.getReadableDataType(schemaProperty.type),
-                                value: 'Inherited',
+                                value: !isComposite && 'Inherited' || '',
                                 nullable: !isComposite && this.getBoolanRepresentation(schemaProperty.nullable) || ''
                             },
                             children
@@ -179,8 +178,12 @@ class TreeTableEditor extends React.Component {
             }
         }
 
-        return result;
+        return result.sort((r1, r2) => r1.data.name.localeCompare(r2.data.name));
     }
+
+    getKeyIdentifier = (propertyName, parentKeyIdentifier) => parentKeyIdentifier !== undefined ? parentKeyIdentifier + "." + propertyName : propertyName;
+
+    isComposite = (schemaProperty) => schemaProperty.type === schemaType.COMPOSITE;
 
     capitalize = (string) => string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 
@@ -191,10 +194,10 @@ class TreeTableEditor extends React.Component {
     getReabableDataValue = (value, type) => {
         switch (type) {
             case schemaType.BOOLEAN: return this.getBoolanRepresentation(value);
-            case schemaType.COMPOSITE: return ""
+            case schemaType.COMPOSITE: return "";
             default:
-                if (value === null) return 'null'
-                else return value
+                if (value === null) return 'null';
+                else return value;
         }
     }
 
@@ -287,115 +290,6 @@ class TreeTableEditor extends React.Component {
         )
     }
 
-    /** Editor for string values */
-    StringEditor = ({ node, onPropValueChange, onPropValueRemove, noWrapping }) => {
-        const defaultValue = node.value;
-
-        // when getting empty value in the text input
-        // we eaither set it to null if possible or use the last valid value
-        const onChange = (e) => {
-            let updateValue = e.target.value;
-            onPropValueChange(node.key, updateValue);
-        }
-
-        const component = (isNull) => (<InputText type="text" defaultValue={defaultValue} onChange={onChange} className="value-column" disabled={isNull} />);
-
-        // in case of no wrapping return only component
-        // this is useful when combining into other editors
-        if (noWrapping) {
-            return component(defaultValue === null)
-        } else {
-
-            return this.wrapWithExtras(
-            component,
-                {
-                    node,
-                    defaultSupplier: () => defaultValue && defaultValue || '',
-                    onPropValueChange,
-                    onPropValueRemove
-                }
-            );
-        }
-    }
-
-    /** Editor for numbers */
-    NumberEditor = ({ node, integer, onPropValueChange, onPropValueRemove }) => {
-        const defaultValue = node.value;
-
-        // when getting empty value in the text input
-        // we eaither set it to null if possible or use the last valid value
-        const onChange = (e) => {
-            let updateValue = e.target.value;
-            if (updateValue.length === 0) {
-                updateValue = 0;
-            } else {
-                const parsed = integer ? parseInt(updateValue) : parseFloat(updateValue);
-                if (!isNaN(parsed)) {
-                    updateValue = parsed;
-                }
-            }
-            onPropValueChange(node.key, updateValue);
-        }
-
-        return this.wrapWithExtras(
-            (isNull, _) => (<InputText keyfilter={/^[a-z0-9{}$\.-]+$/} defaultValue={defaultValue} onChange={onChange} className="value-column" />),
-            {
-                node,
-                defaultSupplier: () => defaultValue && defaultValue || 0,
-                onPropValueChange,
-                onPropValueRemove
-            }
-        );
-    }
-
-    /** Editor for booleans */
-    BooleanEditor = ({ node, onPropValueChange, onPropValueRemove }) => {
-        const defaultValue = node.value;
-        const custom = defaultValue !== null && defaultValue !== undefined && defaultValue !== true && defaultValue !== false;
-
-        return this.wrapWithExtras(
-            (isNull, isDefined) => (
-                <>
-                    {
-                        !custom &&
-                        <>
-                            <Button label="Yes" onClick={() => onPropValueChange(node.key, true)} className={defaultValue !== true && "p-button-secondary"} />
-                            <Button label="No" onClick={() => onPropValueChange(node.key, false)} className={defaultValue !== false && "p-button-secondary"} />
-                            <Button label="Custom" onClick={() => onPropValueChange(node.key, "")} className={"p-button-secondary"} />
-                        </>
-                    }
-                    {
-                        custom &&
-                        <>
-                            <this.StringEditor node={node} onPropValueChange={onPropValueChange} onPropValueRemove={onPropValueRemove} noWrapping />
-                            <Button label="Yes/No" onClick={() => onPropValueChange(node.key, true)} className={"p-button-secondary"} />
-                        </>
-                    }
-                </>
-            ),
-            {
-                node,
-                defaultSupplier: () => defaultValue && defaultValue || true,
-                onPropValueChange,
-                onPropValueRemove
-            }
-        );
-    }
-
-    /** No editor - show value only, if not readable then a small warn message is displayed that the data is not editable */
-    NoEditor = ({ node, readOnly }) => {
-        const value = node.data['value'];
-        return (
-            <div className="p-grid p-nogutter">
-                <div className="p-col">{value && value || ''}</div>
-                {
-                    value && !readOnly &&
-                    <div className="p-col"><Message severity="warn" text="Not editable"></Message></div>
-                }
-            </div>
-        )
-    }
-
     onPropValueChange = (key, value) => {
         this.onPropValueUpdate(key, value, false);
     }
@@ -404,14 +298,13 @@ class TreeTableEditor extends React.Component {
         this.onPropValueUpdate(key, undefined, true);
     }
 
-    onPropValueUpdate = (key, value, unset) => {
+    onPropValueUpdate = (key, value, doUnset) => {
         // TODO no fire if no update
-        // TODO unset option
-        const updated = lodash.cloneDeep(this.props.config);
-        if (unset) {
-            lodash.unset(updated, key)
+        const updated = cloneDeep(this.props.config);
+        if (doUnset) {
+            unset(updated, key)
         } else {
-            lodash.set(updated, key, value);
+            set(updated, key, value);
         }
         this.props.onUpdate(updated);
     }
@@ -423,10 +316,10 @@ class TreeTableEditor extends React.Component {
         const { node } = props;
 
         if (readOnly) {
-            return <this.NoEditor node={node} readOnly />
+            return <NoEditor node={node} readOnly />
         }
 
-        const noEditor = <this.NoEditor node={node} />;
+        const noEditor = <NoEditor node={node} />;
 
         if (!node.schemaProperty) {
             return noEditor;
@@ -437,10 +330,13 @@ class TreeTableEditor extends React.Component {
         switch (type) {
             case schemaType.STRING:
             case schemaType.DURATION:
-                return <this.StringEditor node={node} onPropValueChange={this.onPropValueChange} onPropValueRemove={this.onPropValueRemove} />;
-            case schemaType.INTEGER: return <this.NumberEditor node={node} integer onPropValueChange={this.onPropValueChange} onPropValueRemove={this.onPropValueRemove} />;
-            case schemaType.FLOAT: return <this.NumberEditor node={node} onPropValueChange={this.onPropValueChange} onPropValueRemove={this.onPropValueRemove} />;
-            case schemaType.BOOLEAN: return <this.BooleanEditor node={node} onPropValueChange={this.onPropValueChange} onPropValueRemove={this.onPropValueRemove} />;
+                return <StringEditor node={node} onPropValueChange={this.onPropValueChange} onPropValueRemove={this.onPropValueRemove} wrapWithExtras={this.wrapWithExtras} />;
+            case schemaType.INTEGER:
+                return <NumberEditor node={node} integer onPropValueChange={this.onPropValueChange} onPropValueRemove={this.onPropValueRemove} wrapWithExtras={this.wrapWithExtras} />;
+            case schemaType.FLOAT:
+                return <NumberEditor node={node} onPropValueChange={this.onPropValueChange} onPropValueRemove={this.onPropValueRemove} wrapWithExtras={this.wrapWithExtras} />;
+            case schemaType.BOOLEAN:
+                return <BooleanEditor node={node} onPropValueChange={this.onPropValueChange} onPropValueRemove={this.onPropValueRemove} wrapWithExtras={this.wrapWithExtras} />;
             default: return noEditor;
         }
     }
@@ -456,6 +352,7 @@ class TreeTableEditor extends React.Component {
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
+                    min-width: 760px;
                 }
                 .this :global(.p-menubar)  {
                     background-color: #f4f4f4;
@@ -514,9 +411,129 @@ class TreeTableEditor extends React.Component {
                 <Menubar model={this.menuItems()} />
             </div>
         );
-
     }
 
+}
+
+/** Editor for string values */
+const StringEditor = ({ node, onPropValueChange, onPropValueRemove, wrapWithExtras }) => {
+    const defaultValue = node.value;
+
+    // fire update on change
+    const onChange = (e) => {
+        let updateValue = e.target.value;
+        onPropValueChange(node.key, updateValue);
+    }
+
+    // component to render
+    const component = (isNull) => (<InputText type="text" defaultValue={defaultValue} onChange={onChange} className="value-column" disabled={isNull} />);
+
+    // in case of no wrapping return only component
+    // this is useful when combining into other editors
+    if (!wrapWithExtras) {
+        return component(defaultValue === null)
+    } else {
+        return wrapWithExtras(
+            component,
+            {
+                node,
+                defaultSupplier: () => defaultValue && defaultValue || '',
+                onPropValueChange,
+                onPropValueRemove
+            }
+        );
+    }
+}
+
+/** Editor for numbers */
+const NumberEditor = ({ node, integer, onPropValueChange, onPropValueRemove, wrapWithExtras }) => {
+    const defaultValue = node.value;
+
+    // if we can not parse as int or float, fire the received value
+    const onChange = (e) => {
+        let updateValue = e.target.value;
+        if (updateValue.length === 0) {
+            updateValue = 0;
+        } else {
+            const parsed = integer ? parseInt(updateValue) : parseFloat(updateValue);
+            if (!isNaN(parsed)) {
+                updateValue = parsed;
+            }
+        }
+        onPropValueChange(node.key, updateValue);
+    }
+
+    // component to render
+    const component = () => (<InputText keyfilter={/^[a-z0-9{}$\.-]+$/} defaultValue={defaultValue} onChange={onChange} className="value-column" />);
+
+    if (!wrapWithExtras) {
+        return component();
+    } else {
+        return wrapWithExtras(
+            component,
+            {
+                node,
+                defaultSupplier: () => defaultValue && defaultValue || 0,
+                onPropValueChange,
+                onPropValueRemove
+            }
+        );
+    }
+}
+
+/** Editor for booleans */
+const BooleanEditor = ({ node, onPropValueChange, onPropValueRemove, wrapWithExtras }) => {
+    const defaultValue = node.value;
+    const custom = defaultValue !== null && defaultValue !== undefined && typeof defaultValue !== "boolean";
+
+    // component to render
+    const component = () => (
+        <>
+            {
+                !custom &&
+                <>
+                    <Button label="Yes" onClick={() => onPropValueChange(node.key, true)} className={defaultValue !== true && "p-button-secondary"} />
+                    <Button label="No" onClick={() => onPropValueChange(node.key, false)} className={defaultValue !== false && "p-button-secondary"} />
+                    <Button label="Custom" onClick={() => onPropValueChange(node.key, "")} className={"p-button-secondary"} />
+                </>
+            }
+            {
+                custom &&
+                <>
+                    <StringEditor node={node} onPropValueChange={onPropValueChange} onPropValueRemove={onPropValueRemove} />
+                    <Button label="Yes/No" onClick={() => onPropValueChange(node.key, true)} className={"p-button-secondary"} />
+                </>
+            }
+        </>
+    );
+
+    if (!wrapWithExtras) {
+        return component();
+    } else {
+        return wrapWithExtras(
+            component,
+            {
+                node,
+                defaultSupplier: () => defaultValue && defaultValue || true,
+                onPropValueChange,
+                onPropValueRemove
+            }
+        );
+    }
+}
+
+/** No editor - show value only, if not readable then a small warn message is displayed that the data is not editable */
+const NoEditor = ({ node, readOnly }) => {
+    const value = node.data['value'];
+    return (
+        <div className="p-grid p-nogutter">
+            <div className="p-col">{value && value || ''}</div>
+            {
+                value && !readOnly &&
+                <div className="p-col"><Message severity="warn" text="Not editable"></Message></div>
+            }
+        </div>
+    )
 }
 
 TreeTableEditor.propTypes = {

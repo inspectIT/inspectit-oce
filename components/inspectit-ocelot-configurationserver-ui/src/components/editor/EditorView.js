@@ -16,15 +16,8 @@ const TreeTableEditor = dynamic(() => import('./TreeTableEditor'), { ssr: false 
  */
 class EditorView extends React.Component {
 
-    handleSave = () => {
-        // TODO should this be handled by the configuration view?
-        // since there is value call back, there's no need to get the value from the text editor
-        // in addition this was failing with the visual editor now
-        this.props.onSave(this.props.value);
-    }
-
     render() {
-        const { value, schema, showEditor, hint, onRefresh, onChange, onCreate, isRefreshing, enableButtons, isErrorNotification, notificationIcon, notificationText, canSave, loading, children, readOnly, showVisualConfigurationView, onToggleVisualConfigurationView, onPropValueChange } = this.props;
+        const { value, schema, showEditor, hint, onRefresh, onChange, onCreate, onSave, isRefreshing, enableButtons, isErrorNotification, notificationIcon, notificationText, canSave, loading, children, readOnly, showVisualConfigurationView, onToggleVisualConfigurationView } = this.props;
 
         return (
             <div className="this p-grid p-dir-col p-nogutter">
@@ -66,7 +59,7 @@ class EditorView extends React.Component {
                         canSave={canSave}
                         onRefresh={onRefresh}
                         isRefreshing={isRefreshing}
-                        onSave={this.handleSave}
+                        onSave={onSave}
                         onSearch={() => this.editor.executeCommand("find")}
                         onHelp={() => this.editor.showShortcuts()}
                         visualConfig={showVisualConfigurationView}
@@ -78,7 +71,7 @@ class EditorView extends React.Component {
                 {
                     showEditor && !showVisualConfigurationView &&
                     <div className="p-col editor-container">
-                        <AceEditor editorRef={(editor) => this.editor = editor} onCreate={onCreate} mode="yaml" theme="cobalt" options={editorConfig} value={value} onChange={onChange} canSave={canSave} onSave={this.handleSave} readOnly={readOnly} />
+                        <AceEditor editorRef={(editor) => this.editor = editor} onCreate={onCreate} mode="yaml" theme="cobalt" options={editorConfig} value={value} onChange={onChange} canSave={canSave} onSave={onSave} readOnly={readOnly} />
                     </div>
                 }
                 {
@@ -151,8 +144,6 @@ EditorView.propTypes = {
     showVisualConfigurationView: PropTypes.bool,
     /** Function to react on the change of the enable disable visual configuration view */
     onToggleVisualConfigurationView: PropTypes.func,
-    /** Function to to invoke with property is update via the properties split view */
-    onPropValueChange: PropTypes.func,
 }
 
 EditorView.defaultProps = {

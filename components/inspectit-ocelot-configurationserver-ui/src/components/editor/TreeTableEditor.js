@@ -193,11 +193,22 @@ class TreeTableEditor extends React.Component {
 
     getReabableDataValue = (value, type) => {
         switch (type) {
-            case schemaType.BOOLEAN: return this.getBoolanRepresentation(value);
-            case schemaType.COMPOSITE: return "";
+            case schemaType.BOOLEAN:
+                return this.getBoolanRepresentation(value);
+            case schemaType.COMPOSITE:
+                return "";
+            case schemaType.STRING:
+                if (value === null) {
+                    return 'null';
+                } else {
+                    return '"' + value + '"';
+                }
             default:
-                if (value === null) return 'null';
-                else return value;
+                if (value === null) {
+                    return 'null';
+                } else {
+                    return value;
+                }
         }
     }
 
@@ -525,6 +536,7 @@ const BooleanEditor = ({ node, onPropValueChange, onPropValueRemove, wrapWithExt
 /** No editor - show value only, if not readable then a small warn message is displayed that the data is not editable */
 const NoEditor = ({ node, readOnly }) => {
     const value = node.data['value'];
+
     return (
         <div className="p-grid p-nogutter">
             <div className="p-col">{value && value || ''}</div>

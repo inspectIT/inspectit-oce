@@ -94,6 +94,7 @@ class VisualEditor extends React.Component {
                     display: flex;
                     flex-direction: column;
                     color: #bbb;
+                    text-align: center;
                 }
                 `}</style>
         <Dialog

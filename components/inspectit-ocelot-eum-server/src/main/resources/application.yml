@@ -114,6 +114,14 @@ inspectit-eum-server:
         retention-policy: "autogen"
         # If true, the specified database will be created with the autogen retention policy
         create-database: true
+    tracing:
+      jaeger:
+        # if jaeger exporter for the OT received spans is enabled
+        enabled: false
+        # url pointing to the host and port of the jaeger collector
+        url: http://localhost:14250
+        # service name for all exported spans
+        service-name: browser-js
 
   # settings for the EUM server's self-monitoring
   self-monitoring:

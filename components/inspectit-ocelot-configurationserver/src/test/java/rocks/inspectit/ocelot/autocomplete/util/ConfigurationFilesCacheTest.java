@@ -80,9 +80,9 @@ public class ConfigurationFilesCacheTest {
             map2.put("am", "i");
             secondElement.put("so", map2);
 
-            Collection<Object> beforeLoading = configurationFilesCache.getParsedConfigurationFiles();
+            Collection<Object> beforeLoading = configurationFilesCache.getParsedContents();
             configurationFilesCache.loadFiles();
-            Collection<Object> output = configurationFilesCache.getParsedConfigurationFiles();
+            Collection<Object> output = configurationFilesCache.getParsedContents();
 
             assertThat(output).isNotEqualTo(beforeLoading);
             assertThat(output.contains(firstElement)).isTrue();
@@ -92,7 +92,7 @@ public class ConfigurationFilesCacheTest {
         @Test
         public void exceptionOnLoading() throws IOException {
             configurationFilesCache.loadFiles();
-            Collection<Object> before = configurationFilesCache.getParsedConfigurationFiles();
+            Collection<Object> before = configurationFilesCache.getParsedContents();
             when(fileManager.readFile(any())).thenThrow(new IOException());
             FileInfo mockFileInfo = Mockito.mock(FileInfo.class);
             Stream<String> streamA = Stream.of("wrong.path");
@@ -101,7 +101,7 @@ public class ConfigurationFilesCacheTest {
             when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
 
             configurationFilesCache.loadFiles();
-            Collection<Object> output = configurationFilesCache.getParsedConfigurationFiles();
+            Collection<Object> output = configurationFilesCache.getParsedContents();
 
             assertThat(before).isEqualTo(output);
         }
@@ -121,7 +121,7 @@ public class ConfigurationFilesCacheTest {
             excpectedHashMap.put("mock", null);
 
             configurationFilesCache.loadFiles();
-            Collection<Object> output = configurationFilesCache.getParsedConfigurationFiles();
+            Collection<Object> output = configurationFilesCache.getParsedContents();
 
             assertThat(output).contains(excpectedHashMap);
         }
@@ -138,7 +138,7 @@ public class ConfigurationFilesCacheTest {
             excpectedHashMap.put("mock", null);
 
             configurationFilesCache.loadFiles();
-            Collection<Object> output = configurationFilesCache.getParsedConfigurationFiles();
+            Collection<Object> output = configurationFilesCache.getParsedContents();
 
             assertThat(output).doesNotContain(excpectedHashMap);
         }

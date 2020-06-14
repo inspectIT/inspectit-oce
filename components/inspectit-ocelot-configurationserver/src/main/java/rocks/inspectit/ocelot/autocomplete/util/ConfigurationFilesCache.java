@@ -29,7 +29,7 @@ public class ConfigurationFilesCache {
     @Autowired
     private FileManager fileManager;
 
-    private Collection<Object> yamlContents = new ArrayList<>();
+    private Collection<Object> parsedContents = new ArrayList<>();
 
     private HashMap<String, String> fileContents = new HashMap<>();
 
@@ -50,8 +50,8 @@ public class ConfigurationFilesCache {
      *
      * @return A Collection containing all loaded .yaml and .yml files root elements as Maps or Lists.
      */
-    public Collection<Object> getParsedConfigurationFiles() {
-        return yamlContents;
+    public Collection<Object> getParsedContents() {
+        return parsedContents;
     }
 
     /**
@@ -72,15 +72,15 @@ public class ConfigurationFilesCache {
     @EventListener(FileChangedEvent.class)
     public void loadFiles() throws IOException {
         loadFileContents();
-        loadYamlContents();
+        loadParsedContents();
     }
 
     /**
      * Loads all .yaml and .yml files and saves them as instances of the Yaml class. Before this method is executed,
      * loadFileContents should be executed at least once.
      */
-    private void loadYamlContents() {
-        yamlContents = fileContents.keySet().stream().filter(HAS_YAML_ENDING)
+    private void loadParsedContents() {
+        parsedContents = fileContents.keySet().stream().filter(HAS_YAML_ENDING)
                 .map(key -> parseStringToYamlObject(fileContents.get(key)))
                 .filter(o -> o instanceof Map || o instanceof List)
                 .collect(Collectors.toList());
@@ -141,10 +141,8 @@ public class ConfigurationFilesCache {
     private HashMap<String, String> loadFilesAsMap(List<String> paths) {
         HashMap<String, String> map = new HashMap<>();
         for (String path : paths) {
-            String content = loadContent(path).replace("\r", "");
-            if (!content.equals("")) {
-                map.put(path, content);
-            }
+            Optional<String> content = loadContent(path);
+            content.ifPresent(c -> map.put(path, c));
         }
         return map;
     }
@@ -156,13 +154,12 @@ public class ConfigurationFilesCache {
      * @param path The path to the file which should be loaded.
      * @return The content of the file found under the given path.
      */
-    private String loadContent(String path) {
-        String content = "";
+    private Optional<String> loadContent(String path) {
         try {
-            content = fileManager.readFile(path);
+            return Optional.of(fileManager.readFile(path));
         } catch (IOException e) {
             log.warn("Unable to load file with path {}", path);
         }
-        return content;
+        return Optional.empty();
     }
 }

@@ -88,23 +88,6 @@ public class ConfigurationFilesCacheTest {
             assertThat(output.contains(firstElement)).isTrue();
             assertThat(output.contains(secondElement)).isTrue();
         }
-
-        @Test
-        public void exceptionOnLoading() throws IOException {
-            configurationFilesCache.loadFiles();
-            Collection<Object> before = configurationFilesCache.getParsedContents();
-            when(fileManager.readFile(any())).thenThrow(new IOException());
-            FileInfo mockFileInfo = Mockito.mock(FileInfo.class);
-            Stream<String> streamA = Stream.of("wrong.path");
-            when(mockFileInfo.getAbsoluteFilePaths(any())).thenReturn(streamA);
-            List<FileInfo> mockInfoList = Collections.singletonList(mockFileInfo);
-            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
-
-            configurationFilesCache.loadFiles();
-            Collection<Object> output = configurationFilesCache.getParsedContents();
-
-            assertThat(before).isEqualTo(output);
-        }
     }
 
     @Nested
@@ -115,8 +98,8 @@ public class ConfigurationFilesCacheTest {
             Stream<String> streamA = Stream.of("path/a.yaml");
             when(mockFileInfo.getAbsoluteFilePaths(any())).thenReturn(streamA);
             List<FileInfo> mockInfoList = Collections.singletonList(mockFileInfo);
-            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
-            when(fileManager.readFile(any())).thenReturn("mock:");
+            when(fileManager.getWorkingDirectory().listConfigurationFiles("")).thenReturn(mockInfoList);
+            when(fileManager.getWorkingDirectory().readConfigurationFile(any())).thenReturn(Optional.of("mock:"));
             HashMap<String, Object> excpectedHashMap = new HashMap<>();
             excpectedHashMap.put("mock", null);
 
@@ -132,8 +115,8 @@ public class ConfigurationFilesCacheTest {
             Stream<String> streamA = Stream.of("path/a.xml");
             when(mockFileInfo.getAbsoluteFilePaths(any())).thenReturn(streamA);
             List<FileInfo> mockInfoList = Collections.singletonList(mockFileInfo);
-            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
-            when(fileManager.readFile(any())).thenReturn("mock:");
+            when(fileManager.getWorkingDirectory().listConfigurationFiles("")).thenReturn(mockInfoList);
+            when(fileManager.getWorkingDirectory().readConfigurationFile(any())).thenReturn(Optional.of("mock:"));
             HashMap<String, Object> excpectedHashMap = new HashMap<>();
             excpectedHashMap.put("mock", null);
 
@@ -155,19 +138,19 @@ public class ConfigurationFilesCacheTest {
             Stream<String> streamB = Stream.of("path/b.xml");
             when(mockFileInfo2.getAbsoluteFilePaths(any())).thenReturn(streamB);
             List<FileInfo> mockInfoList = Arrays.asList(mockFileInfo, mockFileInfo2);
-            when(fileManager.getFilesInDirectory("", true)).thenReturn(mockInfoList);
-            when(fileManager.readFile(any())).thenAnswer(new Answer<String>() {
+            when(fileManager.getWorkingDirectory().listConfigurationFiles("")).thenReturn(mockInfoList);
+            when(fileManager.getWorkingDirectory().readConfigurationFile(any())).thenAnswer(new Answer<Optional<String>>() {
                 @Override
-                public String answer(InvocationOnMock invocation) throws Throwable {
+                public Optional<String> answer(InvocationOnMock invocation) throws Throwable {
                     Object[] args = invocation.getArguments();
                     String input = (String) args[0];
                     if (input.equals("path/a.yml")) {
-                        return ("a");
+                        return Optional.of("a");
                     }
                     if (input.equals("path/b.xml")) {
-                        return ("b");
+                        return Optional.of("b");
                     }
-                    return "error";
+                    return Optional.of("error");
                 }
             });
 

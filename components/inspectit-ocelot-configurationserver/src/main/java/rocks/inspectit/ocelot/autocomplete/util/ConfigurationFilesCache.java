@@ -141,25 +141,9 @@ public class ConfigurationFilesCache {
     private HashMap<String, String> loadFilesAsMap(List<String> paths) {
         HashMap<String, String> map = new HashMap<>();
         for (String path : paths) {
-            Optional<String> content = loadContent(path);
+            Optional<String> content = fileManager.getWorkingDirectory().readConfigurationFile(path);
             content.ifPresent(c -> map.put(path, c));
         }
         return map;
-    }
-
-    /**
-     * Takes a String resembling a path and returns the content of the file found under the given path. Returns an empty
-     * String if the file does not exist or an error occurs during loading.
-     *
-     * @param path The path to the file which should be loaded.
-     * @return The content of the file found under the given path.
-     */
-    private Optional<String> loadContent(String path) {
-        try {
-            return Optional.of(fileManager.readFile(path));
-        } catch (IOException e) {
-            log.warn("Unable to load file with path {}", path);
-        }
-        return Optional.empty();
     }
 }

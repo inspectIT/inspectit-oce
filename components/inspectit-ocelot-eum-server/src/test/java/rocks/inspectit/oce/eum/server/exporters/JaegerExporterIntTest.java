@@ -55,13 +55,22 @@ public class JaegerExporterIntTest {
 
     @Test
     void testJaegerIntegration() throws InterruptedException {
-        postSpan();
-        Thread.sleep(1000);
+        // warmup
         postSpan();
 
-        Awaitility.await()
-                .atMost(Duration.TEN_SECONDS)
-                .until(this::assertJaegerHaveTrace);
+        for (int i=0; i<15; i++) {
+            postSpan();
+
+            Thread.sleep(1000);
+            boolean haveTrace = assertJaegerHaveTrace();
+
+            if (haveTrace) {
+                // end test
+                return;
+            }
+        }
+
+        throw new RuntimeException("Jaeger doesn't received any traces");
     }
 
     private void postSpan() {
@@ -87,6 +96,9 @@ public class JaegerExporterIntTest {
                     SERVICE_NAME);
 
             ResponseEntity<String> result = restTemplate.getForEntity(url, String.class);
+
+            System.out.println("Jaeger response: " + result.getStatusCodeValue());
+            System.out.println("|- " + result.getBody());
 
             JsonNode json = objectMapper.readTree(result.getBody());
             return json.get("data").get(0).get("traceID") != null;

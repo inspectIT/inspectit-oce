@@ -1,4 +1,4 @@
-package rocks.inspectit.ocelot.agentcommand;
+package rocks.inspectit.ocelot.core.config.propertysources.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

@@ -1,5 +1,6 @@
 package rocks.inspectit.ocelot.agentcommand.agentcommandhandlerimpl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * Handler for the Agent Health check command.
  */
+@Slf4j
 @Component
 public class AgentHealthCommandHandler implements AgentCommandHandler {
 
@@ -71,7 +73,8 @@ public class AgentHealthCommandHandler implements AgentCommandHandler {
         try {
             Thread.sleep(30000);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            log.debug(String.format("Received interruption for agent with id: %s and command id: %s", agentCommand.getAgentId(), agentCommand
+                    .getCommandId()));
         }
 
         if (!deferredResult.isSetOrExpired()) {

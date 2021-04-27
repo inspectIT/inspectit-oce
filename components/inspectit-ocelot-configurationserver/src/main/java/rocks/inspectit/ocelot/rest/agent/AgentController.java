@@ -46,6 +46,8 @@ public class AgentController extends AbstractBaseController {
     @Autowired
     private AgentCallbackManager agentCallbackManager;
 
+    private ObjectWriter objectWriter = new ObjectMapper().writer().withDefaultPrettyPrinter();
+
     /**
      * Returns the {@link InspectitConfig} for the agent with the given name.
      * Uses text/plain as mime type to ensure that the configuration is presented nicely when opened in a browser
@@ -75,11 +77,11 @@ public class AgentController extends AbstractBaseController {
      *
      * @return Returns either a ResponseEntity with the next command as payload or an emtpy payload.
      */
-    @PostMapping(value = "agent/command", produces = "text/plain")
+    @PostMapping(value = "agent/command", produces = "application/json")
     public ResponseEntity<String> fetchNewCommand(@RequestHeader Map<String, String> headers, @RequestBody AgentResponse response) throws JsonProcessingException, ExecutionException {
         String agentID = headers.get("x-ocelot-agent-id");
         UUID commandID = null;
-        if (response != null) {
+        if (!AgentResponse.getEmptyResponse().equals(response)) {
             commandID = response.getCommandId();
         }
 
@@ -88,14 +90,12 @@ public class AgentController extends AbstractBaseController {
         }
 
         AgentCommand agentCommand = agentCommandManager.getCommand(agentID);
-
+        String agentCommandJson = objectWriter.writeValueAsString(AgentCommand.getEmptyCommand());
         if (agentCommand != null) {
-            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-            String agentCommandJson = ow.writeValueAsString(agentCommand);
-            return ResponseEntity.ok().eTag(String.valueOf(agentCommandJson.hashCode())).body(agentCommandJson);
+            agentCommandJson = objectWriter.writeValueAsString(agentCommand);
         }
 
-        return ResponseEntity.ok().eTag(String.valueOf("".hashCode())).body("");
+        return ResponseEntity.ok().eTag(String.valueOf(agentCommandJson.hashCode())).body(agentCommandJson);
     }
 
     /**

@@ -23,4 +23,12 @@ public class TagUtilsTest {
         assertThat(TagUtils.createTagValue("my-tag-key", "non-printable-character-\u007f")).isEqualTo(TagValue.create("<invalid>"));
     }
 
+    @Test
+    public void createTagValue_tooManyPrints() {
+        for (int i = 0; i < 11; i++) {
+            assertThat(TagUtils.createTagValue("my-tag-key-" + i, "non-printable-character-\u007f")).isEqualTo(TagValue.create("<invalid>"));
+        }
+
+    }
+
 }

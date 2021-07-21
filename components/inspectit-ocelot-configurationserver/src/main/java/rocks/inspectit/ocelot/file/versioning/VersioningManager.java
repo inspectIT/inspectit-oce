@@ -12,6 +12,7 @@ import org.eclipse.jgit.merge.MergeStrategy;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.transport.RemoteRefUpdate;
 import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.springframework.context.ApplicationEventPublisher;
@@ -637,11 +638,20 @@ public class VersioningManager {
      * Promoting the configuration files according to the specified {@link ConfigurationPromotion} definition.
      *
      * @param promotion the promotion definition
+     *
+     * @return Additional information of the promotion in case the promotion was successful. This might contain additional
+     * information about warning or errors which did not affected the promotion itself.
+     *
+     * @throws SelfPromotionNotAllowedException in case the user tries to promote its own files but it is prohibited
+     * @throws ConcurrentModificationException  in case there was a commit on the live branch in the mean time
+     * @throws PromotionFailedException         in case the promotion has been failed
      */
-    public void promoteConfiguration(ConfigurationPromotion promotion, boolean allowSelfPromotion) throws GitAPIException {
+    public PromotionResult promoteConfiguration(ConfigurationPromotion promotion, boolean allowSelfPromotion) throws GitAPIException {
         if (promotion == null || CollectionUtils.isEmpty(promotion.getFiles())) {
             throw new IllegalArgumentException("ConfigurationPromotion must not be null and has to promote at least one file!");
         }
+
+        PromotionResult result = PromotionResult.OK;
 
         try {
             ObjectId liveCommitId = ObjectId.fromString(promotion.getLiveCommitId());
@@ -705,20 +715,24 @@ public class VersioningManager {
             // commit changes
             commitFiles(getCurrentAuthor(), promotion.getCommitMessage(), false);
 
+            // optionally: push to remote
+            RemoteConfigurationsSettings remoteSettings = settings.getRemoteConfigurations();
+            if (remoteConfigurationManager != null && remoteSettings.getTargetRepository() != null) {
+                RemoteRefUpdate.Status status = remoteConfigurationManager.pushBranch(Branch.LIVE, remoteSettings.getTargetRepository());
+                if (status != RemoteRefUpdate.Status.OK && status != RemoteRefUpdate.Status.UP_TO_DATE) {
+                    result = PromotionResult.SYNCHRONIZATION_FAILED;
+                }
+            }
         } catch (IOException | GitAPIException ex) {
             throw new PromotionFailedException("Configuration promotion has failed.", ex);
         } finally {
             // checkout workspace branch
             git.checkout().setName(Branch.WORKSPACE.getBranchName()).call();
 
-            // optionally: push to remote
-            RemoteConfigurationsSettings remoteSettings = settings.getRemoteConfigurations();
-            if (remoteConfigurationManager != null && remoteSettings.getTargetRepository() != null) {
-                remoteConfigurationManager.pushBranch(Branch.LIVE, remoteSettings.getTargetRepository());
-            }
-
             eventPublisher.publishEvent(new ConfigurationPromotionEvent(this, getLiveRevision()));
         }
+
+        return result;
     }
 
     private boolean containsSelfPromotion(ConfigurationPromotion promotion, WorkspaceDiff diff) {

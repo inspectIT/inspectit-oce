@@ -66,7 +66,7 @@ public class FileManager {
     private List<WorkspaceVersion> workspaceVersions;
 
     @Autowired
-    public FileManager(InspectitServerSettings settings, ApplicationEventPublisher eventPublisher, Executor executor) throws GitAPIException {
+    public FileManager(InspectitServerSettings settings, ApplicationEventPublisher eventPublisher, Executor executor) throws GitAPIException, IOException {
         Path workingDirectory = Paths.get(settings.getWorkingDirectory()).toAbsolutePath().normalize();
 
         // We use an asynchronous event publishing mechanism to make sure that Event-Listeners do not accidentally get hold of locks
@@ -192,5 +192,13 @@ public class FileManager {
             }
         }
         return workspaceVersions;
+    }
+
+    /**
+     * Synchronizes the local working directory with a configured remote configuration source.
+     */
+    public void synchronizeWorkspace() throws GitAPIException, IOException {
+        log.info("Synchronizing configuration workspace by pulling in remote configuration source.");
+        versioningManager.pullSourceBranch();
     }
 }

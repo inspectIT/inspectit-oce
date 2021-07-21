@@ -50,6 +50,11 @@ inspectit-config-server:
     # If enabled, non-admin users cannot promote their own changes.
     # The writing of the configuration and the promotion needs to be done by two separate persons.
     four-eyes-promotion: false
+    # If enabled, all authorized and unauthorized accesses attempts to secured endpoints will be logged.
+    access-log: true
+    # Valid tokens which can be used to authorize calls against the '/api/v1/hooks/**' endpoints.
+    # webhook-tokens:
+    #  - 'your_hopefully_very_secure_token'
 
   # settings for the agent commands
   agent-command:
@@ -68,6 +73,11 @@ inspectit-config-server:
     enabled: false
     # Whether the current live branch should be pushed during startup.
     push-at-startup: true
+    # Whether the remote source branch should be fetched and merged into the current workspace branch during startup.
+    pull-at-startup: false
+    # Whether synchronized files should be promoted automatically, after they have been fetched from the
+    # configuration remote.
+    auto-promotion: true
     ## The remote Git repository which will be used to fetch workspace-configurations from.
     #source-repository:
       ## The name of the remote ref in the local Git repository.
